@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db_mails:
+    image: postgres:13
+    container_name: db_mails
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - mails_postgres_data:/var/lib/postgresql/data
+
+  redis_mails:
+    image: redis:6
+
+  web_mails:
+    container_name: web_mails
+    build: .
+    command: /app/entrypoint.sh
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+    depends_on:
+      - db_mails
+      - redis_mails
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db_mails:5432/postgres
+      REDIS_URL: redis://redis_mails:6379/1
+    ports:
+      - "8000:8000"
+
+  nginx_mails:
+    image: nginx:latest
+    container_name: nginx_mails
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - static_volume:/app/static
+    depends_on:
+      - web_mails
+
+volumes:
+  mails_postgres_data:
+  static_volume:
